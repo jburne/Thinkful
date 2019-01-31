@@ -1,0 +1,29 @@
+Bayes Drill
+
+A diagnostic test has a 98% probability of giving a positive result when applied to a person suffering from Thripshaw's Disease, and 10% probability of giving a (false) positive when applied to a non-sufferer. It is estimated that 0.5 % of the population are sufferers. Suppose that the test is now administered to a person whose disease status is unknown. Calculate the probability that the test will:
+
+1) Give a positive result.
+
+	There are two ways there will be a positive result:
+
+	Correct result for an infected person:
+
+		P(I)P(Pos|I) = (.005)(.98)=0.0049
+
+	False positive for a healthy person
+
+		P(`I)P(Pos|`I)= (0.995)(.10)=0.0995
+
+	Together  P(Pos)= 0.1044
+
+2)	Correctly diagnose a sufferer of Thripshaw's
+
+	.98 as given
+
+3)	Correctly diagnose a non-sufferer of Thripshaw's
+
+    .9
+
+4)	Misclassify a randomly selected person
+
+	(.995)(.1)+(0.005)(.02)=0.0996
