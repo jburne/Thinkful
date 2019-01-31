@@ -1,0 +1,17 @@
+MontyAndTheGoat
+
+This question really relies on whether the host has knowledge of where the prize is, or whether he is opening the door at random.
+
+If at random:
+	1/3 of the time you will learn where the prize is because you'll learn the car is behind the door the host opened. But this hasn't happened, thus you now have a 1/2 chance that your door has the prize. There is no advantage to switch.
+
+If host knows:
+	100% of the time the host can open a 'zonk' door.  You should switch.  It's easy to see this if you think about a more extreme situation.
+
+	Assume there are 1,000,000 doors, so your door has a 1/1,000,000 chance of having the prize.  There is a 999,999/1,000,000 chance the prize is behind one of the other doors.  Whether or not you have the prize, the host can open 999,998 doors
+
+	with probability 1/1,000,000 the host selects one door to remain closed and opens the rest.
+
+	with probability 999,999/1,000,000 the host opens all the doors except the one he knows has the prize.
+
+	The second situation is far more likely to have happened.  This is why you should switch.
