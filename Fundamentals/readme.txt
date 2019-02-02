@@ -1,0 +1,1 @@
+This directory includes files, notes and exercises from the Thinkful Data Analytics Fundamentals course.
