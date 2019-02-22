@@ -1,0 +1,45 @@
+Drill@SQL_Aggregation
+
+1) What was the hottest day in our data set? Where was that?
+
+SELECT
+	ZIP, MAX(MaxTemperatureF) AS Hottest
+FROM
+	weather
+GROUP BY 
+	ZIP;
+
+And it appears the hottest recorded temperature was 134 in zip code 94063.  I would guess that is in error, especially given it happened in NOVEMBER in Redwood City.  Their all-time record high temperature is 110.
+
+2) How many trips started at each station?
+
+SELECT 
+	start_station AS origin,
+	COUNT(*)
+FROM trips
+GROUP BY
+	start_station
+ORDER BY
+	start_station;
+
+3) What's the shortest trip that happened? (This would have to be assumed to be length of time, as we couldn't assume trips went directly station to station) 
+
+SELECT 
+	MIN(duration) 
+FROM
+	trips
+
+The answer is 60 minutes, and I suppose that this bike share program has a "first hour free" clause. Hummm: The webpage I looked up said the first 30 minutes are free.
+
+4) What is the average trip duration, by end station?
+
+SELECT 
+	end_station AS finish,
+	ROUND(AVG(duration)) AS typicalTrip
+FROM
+	trips
+GROUP BY
+	end_station
+ORDER BY
+	end_station
+
