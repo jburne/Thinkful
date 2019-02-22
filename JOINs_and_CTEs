@@ -1,0 +1,132 @@
+-- 1) What are the three longest trips on rainy days?
+
+WITH
+	rainy_days
+AS (
+	SELECT
+		date
+	FROM
+		weather
+	WHERE
+		events LIKE 'Rain'
+	)
+
+SELECT
+	duration,
+	start_date,
+	end_date,
+	date
+FROM
+	rainy_days
+
+JOIN
+	trips
+ON
+	DATE(rainy_days.date) >= DATE(trips.start_date) AND
+	DATE(rainy_days.date) <= DATE(trips.end_date)
+
+ORDER BY
+	duration DESC;
+
+-- all 5 of the longest "rainy day trips" were the same, 85900
+
+2) Which station is full most often?
+
+-- This one stumped me and I didn't understand until I looked 
+-- at solution.  I still have one question.
+
+	SELECT
+		trips.station_id,
+		stations.name,
+		COUNT(CASE WHEN docks_available = 0 THEN 1 END) oops
+	
+	FROM	
+		status 
+	JOIN	
+		stations
+	ON 
+		stations.station_id = status.station_id
+	GROUP BY 
+		1, 2  
+		-- why is this necessary?
+	ORDER BY 
+		oops DESC
+
+3)	Return a list of stations with a count of the number of 
+    trips starting at that station but ordered by dockcount.
+
+    SELECT 
+		start_station,
+		dockcount,
+		COUNT(*)
+
+	FROM 
+		trips
+	JOIN
+		stations
+	ON
+		stations.name LIKE trips.start_station
+
+	GROUP BY 
+		start_station, dockcount  
+		-- need to discuss this command.
+	ORDER BY 
+		dockcount DESC
+
+4)	(Challenge) What's the length of the longest trip for each 
+	day it rains anywhere?
+
+-- For the challenge, I limited myself to attempting to 
+-- document the reasoning of the provided key
+
+WITH 
+	-- Here we are defining a collection of days 
+	-- where it rained SOMEWHERE
+
+rainy  AS	
+	(
+		SELECT 
+			DATE(date) weather_date
+			-- the above is defining a new entity, named 
+			-- 'weather_date' and defined as a cast date type.
+		FROM 
+			weather
+		WHERE 
+			events = 'Rain' 
+			-- not sure why we're not using LIKE here.
+		GROUP BY 1  
+			-- Grouping by the first thing we have selected, 
+			-- namely this new weather_date. Not sure why 
+			-- using column numbers is prefered.
+	),
+	-- note the comma to separate CTE statements
+
+-- Next we are defining trips on days where it rained 
+-- SOMEWHERE but only on the FIRST day of the trip. 
+-- Thus we are missing days when it rained the second 
+-- day but not the first. My alteration to the key increased
+-- output from 92 to 117
+
+rain_trips AS
+	(
+		SELECT
+			trip_id,
+			duration,
+			DATE(trips.start_date) rain_trips_date
+		FROM 
+			trips
+		JOIN 
+			rainy
+		ON 
+			rainy.weather_date = DATE(trips.start_date)	OR
+			rainy.weather_date = DATE(trips.end_date)     --Checking for rain on ending day as well
+		ORDER BY duration DESC
+	)
+	
+SELECT 
+	rain_trips_date,
+	MAX(duration) max_duration
+FROM rain_trips
+
+GROUP BY 1  -- sort by date
+ORDER BY max_duration DESC
