@@ -1,0 +1,293 @@
+B&B San Fran
+
+** Spend a few minutes getting up to speed on the database schema. 
+** There are three tables: sfo_calendar, sfo_listings, and sfo_reviews.
+
+There are actually more tables than this, but those three are included.
+It's possible that someone mistakenly created these other tables and added them to the database by mistake.  I'll endeavor to answer the questions with only the three tables listed above.
+ 
+sfo_calendar
+	listing_id  (bigint)
+	calender_date	(date: Curious that calender is misspelled here)
+	available		(character: seems to be f, t -- perhaps it 
+					 should be a boolean?)
+	price			(price: text but clearly seems to be $xxx.xx 
+					 or null)
+
+sfo_listings
+	id 					(bigint: might not be listing_id but rather 
+				 	 	transaction id?)
+	name				(text: pretty clearly discription of unit)
+	host_id				(bigint)
+	host_name			(text)
+	neighbourhood_group	(text)
+	neighbourhood 		(text)
+	latitude			(text: pretty clearly should be real)
+	longitude			(text: pretty clearly should be real)
+	room_type			(text: but with limited choices, probably 		
+						 created with pull down)
+	price				(real: but all seem to be integers)
+	minimum_nights		(integer)
+	number_of_reviews	(integer)
+	last_review			(date)
+	review_per_month	(real)
+	calculated_host_listings_count
+						(integer: I suppose because multiple listing per host.)
+	availability_365	(text: Not sure why not an integer. Some 
+						 entries with ?)
+
+sfo_reviews
+	listing_id			(bigint)
+	id 					(bigint: This is a transaction id)
+	review_date			(date)
+	reviewer_id			(bigint)
+	reviewer_name		(text)
+	comments			(text)
+
+Once you have your database set up, run some queries to start understanding San Francisco's Airbnbs. Here are some questions you should try to answer:
+
+1)	What's the most expensive listing? What else can you tell me about 
+	the listing?
+
+	I presume I'm supposed to answer with only the three tables given above.
+
+	SELECT * FROM sfo_listings
+	ORDER BY price DESC
+	LIMIT 1
+
+	The most expensive listing is for $10000, but is a full house, 7500
+	SQ FT, four floors with a hot tub.  Owned by Sarah;, the house is in the Western Addition neighborhood.  The minimum number of days to rent is 2.  The house had an "availablility_365" value of 18, which means a) it is only available 18 days per year or b) it was rented almost every day. Given the limited number of reviews, I would guess it's available only a limited number of days.
+
+	Let's see what the  calendar says about it:
+
+	SELECT * FROM sfo_calendar
+	WHERE 
+		listing_id=24650875 AND available='t'
+	ORDER BY
+		calender_date
+
+	This returns 28 instances where the property was listed as 
+	"available."  To find out if that's when rental COULD have occured versus being the only time when it wasn't rented, I'll match these 28 dates with the dates from the reviews.
+
+	WITH
+		avail_dates
+	AS 	(
+		SELECT 
+			listing_id, 
+			calender_date, 
+			price 
+		FROM sfo_calendar
+		WHERE 
+			listing_id=24650875 AND available='t'
+		)
+	SELECT
+		ad.listing_id,
+		ad.calender_date,
+		r.review_date,
+		r.listing_id,
+		ad.price
+	FROM
+		avail_dates ad
+	JOIN
+		sfo_reviews r
+	ON
+		ad.listing_id = r.listing_id
+
+	--> 24650875	2018-12-29	2018-05-09	24650875	$9,875.00
+
+	****************************************
+	What??  How do i get a review dated BEFORE the listing.
+	I think I might not know what the data means.
+	****************************************
+
+	SELECT comments FROM sfo_reviews
+	WHERE listing_id=24650875
+
+	The four comments were all very postive
+
+	"Gorgeous home. Terrific hosts. Was amazing place for our crew to return to and work/relax after long days."
+
+
+	"My friends and I travelled to San Francisco for a wedding. Everyone agreed the home was beautiful and spacious. The hosts, Sarah and Jason, were also super pleasant to deal with. Overall, would 100% recommend this home to anyone looking for a place to stay in San Francisco."
+
+	"The house was perfect for the 7 adults and 1 infant we had with us. The location was great, kitchen was amazing, and the family loved the projector viewing for movies and basketball. We would definitely rent again."
+
+	"Sarah’s home is beautiful!  It is comfy, clean, spacious, and in a great neighborhood.  We will certainly be back!"
+
+	MUSINGS: the number of reviews is 3, yet there are 4 reviews, so I thought perhpas that the reviews are for the HOST, not the
+	specific unit.  Let's explore this a little bit.
+
+	SELECT * FROM sfo_listings
+	WHERE host_id=6460979
+
+	Conclusion: there is something wrong with the column of "reviews"
+
+	SECOND ATTEMPT:
+
+	Let's assume that the highest priced house is the one with the highest AVERAGE cost per night.
+
+	SELECT 
+		listing_id,
+		AVG(CAST(replace(replace (price,'$',''),',','') AS float)) ave_pr
+	FROM sfo_calendar
+	WHERE price IS NOT NULL AND available = 't'
+	GROUP BY listing_id
+	ORDER BY ave_pr DESC;
+
+	This is remarkably curious as my highest price home is now
+	listing_id 1059961 with an average price of $106955.62 which 
+	bears investigating.  
+
+	SELECT 
+		*
+	FROM sfo_calendar
+	WHERE listing_id = 1059961
+
+	Sure enough, it does command that high a price.  Let's find out more about the house.
+
+	WITH
+		avail_dates
+	AS 	(
+		SELECT 
+			listing_id, 
+			calender_date, 
+			price 
+		FROM sfo_calendar
+		WHERE 
+			listing_id=1059961 AND available='t'
+		)
+	SELECT
+		ad.listing_id,
+		ad.calender_date,
+		r.review_date,
+		r.listing_id,
+		r.comments,
+		ad.price,
+		l.name,
+		l.neighbourhood,
+		l.room_type
+	FROM
+		avail_dates ad
+	JOIN
+		sfo_reviews r
+	ON
+		ad.listing_id = r.listing_id
+	JOIN
+		sfo_listings l
+	ON
+		ad.listing_id = l.id
+
+	THIS JUST DOESN'T PASS THE "SNIFF TEST". SO I'M GOING TO MOVE ON TO QUESTION 2.
+
+	****************************************************************
+	****************************************************************
+
+2)	What neighborhoods seem to be the most popular?
+
+	(a) "Which neighborhoods seem to be the most expensive?"
+
+		See below
+
+	(b) "Which neighborhoods seem have the highest ave percentage 	
+		rented?"
+
+	SELECT
+		neighbourhood,
+		CAST( 
+			AVG(CAST(availability_365 AS INT)) 
+			AS 
+			NUMERIC(6,2)) ave_avail
+	FROM
+		sfo_listings
+	WHERE availability_365 <> '?'
+	GROUP BY neighbourhood
+	ORDER BY ave_avail DESC
+
+	The results say that the top 3 "neighbourhoods" by 
+	rental actively were Lakeshore, Presidio, and Nob Hill
+
+	*******************************************************
+	Going by price per neighbourhood I get the top three as
+	Nob Hill, South of Market, and Western Addition.
+
+	SELECT 
+		cal.listing_id,
+		l.neighbourhood,
+		COUNT(*),
+		AVG(CAST(replace(replace (cal.price,'$',''),',','') AS float)) ave_pr_by_neigh
+			 
+	FROM sfo_calendar cal
+	JOIN sfo_listings l
+	ON cal.listing_id = l.id
+	WHERE cal.price IS NOT NULL AND available = 't'
+	GROUP BY cal.listing_id, l.neighbourhood 
+	ORDER BY ave_pr_by_neigh DESC;
+
+	BUT --- I know that there are some really extreme values
+	in this data so perhaps MEDIAN is better than average.  Let's 
+	see if makes a difference. SUPRISE -- MEDIAN is not a 
+	"thing" in SQL.
+
+	*******************************************************
+	Finally, if we were going by "popular" as "something home
+	owners do in this neighbourhood..." we'd want to rank the 
+	neighbourhoods by number of B&Bs which exist.
+
+	SELECT 
+		neighbourhood,
+		COUNT(id) bbs			 
+	FROM sfo_listings
+	GROUP BY neighbourhood 
+	ORDER BY bbs DESC;
+
+	By this criteria, the top three neighbourhoods are Mission, 
+	Western Addition, and South of Market.
+
+	****************************************************************
+	****************************************************************
+3a)	What time of year is the cheapest time to go to San Francisco? 
+
+	The quickest way would be to sort the average cost by
+	date.
+
+	SELECT 
+		calender_date, 
+		AVG(CAST(replace(replace(price,'$',''),',','') AS float)) ave_cost
+	FROM
+		sfo_calendar
+	WHERE 
+		available = 't'
+	GROUP BY 
+		calender_date
+	ORDER BY 
+		ave_cost DESC
+
+	****************************************************************
+	But to get it sorted by month, it turns out it's september
+
+	SELECT 
+		EXTRACT(MONTH FROM calender_date) month_of_listing,
+		AVG(CAST(replace(replace (price,'$',''),',','') AS float)) ave_pr
+	FROM sfo_calendar
+	GROUP BY month_of_listing
+	ORDER BY ave_pr DESC
+	****************************************************************
+3b)	What time of year is the busiest time for B&Bs in San Francisco? 
+
+	I would think that just a simple counting of total B&B's rented per 
+	day would suffice for this, so it will be almost the same as above
+	only we want to just COUNT how many units were rented, not worrying\
+	about the cost.
+
+	SELECT 
+		EXTRACT(MONTH FROM calender_date) month_of_listing,
+		COUNT(available) rented
+	FROM sfo_calendar
+	GROUP BY month_of_listing
+	HAVING available = 't'
+	ORDER BY rented DESC
+
+	The months with the greatest number of units rented was November,
+	January, and December.  Curiously, the most expensive month was
+	the LEAST busiest.  Wondering why this is.  Well there's this thing
+	called "Dreamforce" right in the middle of September...
